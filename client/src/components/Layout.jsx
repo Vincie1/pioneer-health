@@ -44,12 +44,20 @@ function Header({ variant }) {
             </Link>
           </div>
         ) : (
-          <Link
-            to="/dashboard"
-            className="hidden text-xs font-medium text-ink-faint hover:text-ink-soft sm:block"
-          >
-            Staff dashboard
-          </Link>
+          <div className="hidden items-center gap-4 sm:flex">
+            <Link
+              to="/mobile"
+              className="text-xs font-medium text-ink-faint hover:text-ink-soft"
+            >
+              Mobile app
+            </Link>
+            <Link
+              to="/dashboard"
+              className="text-xs font-medium text-ink-faint hover:text-ink-soft"
+            >
+              Staff dashboard
+            </Link>
+          </div>
         )}
       </div>
     </header>
