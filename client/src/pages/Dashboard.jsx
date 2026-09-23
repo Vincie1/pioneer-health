@@ -56,10 +56,30 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, [load]);
 
-  async function callNext(service) {
-    await api.callNext(service).catch(() => {});
+  // Advance a single ticket through its lifecycle.
+  async function advanceTicket(code, status) {
+    await api.setStatus(code, status).catch(() => {});
     load();
   }
+
+  async function advanceEmergency(code, status) {
+    await api.setEmergencyStatus(code, status).catch(() => {});
+    load();
+  }
+
+  async function advanceScript(id, status) {
+    await api.setScriptStatus(id, status).catch(() => {});
+    load();
+  }
+
+  async function answerNurse(id) {
+    await api.setNurseStatus(id, 'answered').catch(() => {});
+    load();
+  }
+
+  // Next status in the ticket lifecycle, or null if terminal.
+  const NEXT_STATUS = { waiting: 'called', called: 'in_room', in_room: 'done' };
+  const NEXT_LABEL = { waiting: 'Call', called: 'In room', in_room: 'Done' };
 
   const waiting = tickets.filter((t) => t.status !== 'done');
 
@@ -108,12 +128,18 @@ export default function Dashboard() {
                 >
                   {STATUS_LABEL[t.status]}
                 </span>
-                <button
-                  onClick={() => callNext(t.service)}
-                  className="rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-semibold text-brand-700 transition hover:bg-brand-50"
-                >
-                  Call next
-                </button>
+                {NEXT_STATUS[t.status] && (
+                  <button
+                    onClick={() => advanceTicket(t.code, NEXT_STATUS[t.status])}
+                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                      NEXT_STATUS[t.status] === 'done'
+                        ? 'bg-brand-600 text-white hover:bg-brand-700'
+                        : 'border border-slate-200 text-brand-700 hover:bg-brand-50'
+                    }`}
+                  >
+                    {NEXT_LABEL[t.status]}
+                  </button>
+                )}
               </div>
             ))}
           </div>
@@ -153,12 +179,27 @@ export default function Dashboard() {
                   <p className="mt-1 text-xs text-ink-soft">
                     {e.note ?? `${e.code} raised from kiosk`}
                   </p>
-                  <Link
-                    to="/mobile"
-                    className="mt-2 inline-block text-xs font-semibold text-red-600 hover:underline"
-                  >
-                    Open EMS app view →
-                  </Link>
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-red-600">
+                      {e.status}
+                    </span>
+                    {e.status === 'active' && (
+                      <button
+                        onClick={() => advanceEmergency(e.code, 'dispatched')}
+                        className="rounded-lg border border-red-200 px-2.5 py-1 text-[11px] font-semibold text-red-600 hover:bg-red-50"
+                      >
+                        Dispatch EMS
+                      </button>
+                    )}
+                    {e.status === 'dispatched' && (
+                      <button
+                        onClick={() => advanceEmergency(e.code, 'resolved')}
+                        className="rounded-lg border border-slate-200 px-2.5 py-1 text-[11px] font-semibold text-ink-soft hover:bg-slate-50"
+                      >
+                        Resolve
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -174,10 +215,30 @@ export default function Dashboard() {
                 </p>
                 <div className="mt-2 space-y-1.5">
                   {scripts.length === 0 && <p className="text-sm text-ink-faint">None requested.</p>}
-                  {scripts.slice(0, 4).map((s) => (
-                    <div key={s.id} className="flex items-center justify-between text-sm">
-                      <span className="truncate text-ink">{s.medication}</span>
-                      <span className="ml-2 shrink-0 text-[11px] text-ink-faint">{s.patientName}</span>
+                  {scripts.slice(0, 5).map((s) => (
+                    <div key={s.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-ink">{s.medication}</span>
+                      {s.status === 'requested' && (
+                        <button
+                          onClick={() => advanceScript(s.id, 'ready')}
+                          className="shrink-0 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-brand-700 hover:bg-brand-50"
+                        >
+                          Mark ready
+                        </button>
+                      )}
+                      {s.status === 'ready' && (
+                        <button
+                          onClick={() => advanceScript(s.id, 'collected')}
+                          className="shrink-0 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-ink-soft hover:bg-slate-50"
+                        >
+                          Collected
+                        </button>
+                      )}
+                      {s.status === 'collected' && (
+                        <span className="shrink-0 text-[10px] font-semibold uppercase text-ink-faint">
+                          Collected
+                        </span>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -189,9 +250,17 @@ export default function Dashboard() {
                 <div className="mt-2 space-y-1.5">
                   {nurse.length === 0 && <p className="text-sm text-ink-faint">No open requests.</p>}
                   {nurse.slice(0, 4).map((n) => (
-                    <div key={n.id} className="text-sm">
-                      <span className="text-ink">{n.patientName}</span>
-                      {n.reason && <span className="text-ink-faint"> — {n.reason}</span>}
+                    <div key={n.id} className="flex items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 flex-1 truncate text-ink">
+                        {n.patientName}
+                        {n.reason && <span className="text-ink-faint"> — {n.reason}</span>}
+                      </span>
+                      <button
+                        onClick={() => answerNurse(n.id)}
+                        className="shrink-0 rounded-lg border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-brand-700 hover:bg-brand-50"
+                      >
+                        Answered
+                      </button>
                     </div>
                   ))}
                 </div>

@@ -203,6 +203,22 @@ app.get('/api/emergencies', wrap(async (_req, res) => {
   res.json(emergencies);
 }));
 
+// Advance an emergency: active -> dispatched -> resolved.
+app.patch('/api/emergencies/:code', wrap(async (req, res) => {
+  const { status } = req.body ?? {};
+  const allowed = ['active', 'dispatched', 'resolved'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  try {
+    const em = await prisma.emergency.update({
+      where: { code: req.params.code },
+      data: { status },
+    });
+    res.json(em);
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
+}));
+
 // ---- scripts (repeat prescriptions) ---------------------------------------
 
 app.post('/api/scripts', wrap(async (req, res) => {
@@ -218,6 +234,19 @@ app.get('/api/scripts', wrap(async (req, res) => {
   const where = req.query.patient ? { patientName: String(req.query.patient) } : {};
   const scripts = await prisma.script.findMany({ where, orderBy: { createdAt: 'desc' } });
   res.json(scripts);
+}));
+
+// Advance a script: requested -> ready -> collected.
+app.patch('/api/scripts/:id', wrap(async (req, res) => {
+  const { status } = req.body ?? {};
+  const allowed = ['requested', 'ready', 'collected'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  try {
+    const script = await prisma.script.update({ where: { id: req.params.id }, data: { status } });
+    res.json(script);
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
 }));
 
 // ---- nurse line ------------------------------------------------------------
@@ -237,6 +266,19 @@ app.get('/api/nurse-requests', wrap(async (_req, res) => {
     orderBy: { createdAt: 'desc' },
   });
   res.json(requests);
+}));
+
+// Mark a nurse callback answered (removes it from the open list).
+app.patch('/api/nurse-requests/:id', wrap(async (req, res) => {
+  const { status } = req.body ?? {};
+  const allowed = ['open', 'answered'];
+  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  try {
+    const r = await prisma.nurseRequest.update({ where: { id: req.params.id }, data: { status } });
+    res.json(r);
+  } catch {
+    res.status(404).json({ error: 'Not found' });
+  }
 }));
 
 // ---- dashboard stats -------------------------------------------------------

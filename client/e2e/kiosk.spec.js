@@ -59,3 +59,14 @@ test('mobile booking is at-home, then arrives via kiosk check-in', async ({ page
   await page.goto('/dashboard');
   await expect(page.getByText(code)).toBeVisible();
 });
+
+test('staff can advance a ticket through its lifecycle to done', async ({ page }) => {
+  await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { name: /staff dashboard/i })).toBeVisible();
+
+  // The first waiting patient row has a "Call" button. Advance it.
+  const firstRow = page.locator('.divide-y > div').first();
+  await firstRow.getByRole('button', { name: 'Call', exact: true }).click();
+  // After calling, the same row should offer "In room".
+  await expect(firstRow.getByRole('button', { name: /in room/i })).toBeVisible();
+});

@@ -30,13 +30,19 @@ export const api = {
   createEmergency: (data) =>
     req('/emergencies', { method: 'POST', body: JSON.stringify(data) }),
   listEmergencies: () => req('/emergencies'),
+  setEmergencyStatus: (code, status) =>
+    req(`/emergencies/${code}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   createScript: (data) => req('/scripts', { method: 'POST', body: JSON.stringify(data) }),
   listScripts: (patient) => req(`/scripts${patient ? `?patient=${encodeURIComponent(patient)}` : ''}`),
+  setScriptStatus: (id, status) =>
+    req(`/scripts/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   createNurseRequest: (data) =>
     req('/nurse-requests', { method: 'POST', body: JSON.stringify(data) }),
   listNurseRequests: () => req('/nurse-requests'),
+  setNurseStatus: (id, status) =>
+    req(`/nurse-requests/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 
   stats: () => req('/stats'),
 };
