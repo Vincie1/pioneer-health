@@ -1,0 +1,16 @@
+node_modules/
+dist/
+.env
+*.log
+
+# SQLite / Prisma
+server/prisma/dev.db
+server/prisma/dev.db-journal
+server/prisma/migrations/
+
+# Playwright
+client/test-results/
+client/playwright-report/
+client/.playwright/
+
+.DS_Store

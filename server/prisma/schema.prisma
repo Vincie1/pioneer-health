@@ -1,0 +1,35 @@
+// Prisma schema — Pioneer Health kiosk
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A patient check-in at the kiosk produces a queue Ticket.
+model Ticket {
+  id           String   @id @default(cuid())
+  code         String   @unique // e.g. "C-061"
+  service      String            // consultation | medication | records | virtual
+  fullName     String
+  idNumber     String
+  mobile       String
+  status       String   @default("waiting") // waiting | called | in_room | done
+  position     Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Emergency requests raised from the kiosk emergency screen.
+model Emergency {
+  id          String   @id @default(cuid())
+  code        String   @unique // e.g. "EMS-042"
+  type        String            // cardiac | stroke | bleeding | trauma | breathing | other
+  priority    Int      @default(1)
+  status      String   @default("active") // active | dispatched | resolved
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

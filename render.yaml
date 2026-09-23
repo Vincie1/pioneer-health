@@ -1,0 +1,24 @@
+# Render blueprint. Push this repo to GitHub, then in Render:
+#   New + → Blueprint → pick this repo. Render reads this file and provisions
+#   the backend web service with a 1 GB persistent disk for the SQLite DB.
+#
+# After the frontend is on Netlify, set CORS_ORIGIN (below) to the Netlify URL
+# and redeploy so the browser is allowed to call the API.
+services:
+  - type: web
+    name: pioneer-health-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        value: file:/data/prod.db
+      - key: CORS_ORIGIN
+        value: "*" # tighten to the Netlify URL after the frontend is live
+    disk:
+      name: pioneer-health-data
+      mountPath: /data
+      sizeGB: 1
