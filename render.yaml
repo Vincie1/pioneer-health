@@ -21,4 +21,4 @@ services:
       - key: DATABASE_URL
         value: file:./prod.db
       - key: CORS_ORIGIN
-        value: "*" # tighten to the Netlify URL after the frontend is live
+        value: "https://sensational-hamster-415d19.netlify.app"
