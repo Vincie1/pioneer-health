@@ -90,6 +90,38 @@ export function Icon({ name, className = 'w-6 h-6' }) {
           <path d="m9 6 6 6-6 6" />
         </svg>
       );
+    case 'ambulance':
+      return (
+        <svg {...common}>
+          <path d="M8 6h8a2 2 0 0 1 2 2v3h2.5a1.5 1.5 0 0 1 1.2.6l1.5 2a2 2 0 0 1 .3 1.1V17a1 1 0 0 1-1 1h-1" />
+          <path d="M8 18H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2" />
+          <path d="M9 18h6" />
+          <circle cx="7.5" cy="18.5" r="1.8" />
+          <circle cx="16.5" cy="18.5" r="1.8" />
+          <path d="M12 3.5v3M10.5 5h3" />
+        </svg>
+      );
+    case 'pin':
+      return (
+        <svg {...common}>
+          <path d="M12 21s-6-5.2-6-10a6 6 0 0 1 12 0c0 4.8-6 10-6 10z" />
+          <circle cx="12" cy="11" r="2" />
+        </svg>
+      );
+    case 'bell':
+      return (
+        <svg {...common}>
+          <path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6" />
+          <path d="M10 20a2 2 0 0 0 4 0" />
+        </svg>
+      );
+    case 'heart-pulse':
+      return (
+        <svg {...common}>
+          <path d="M12 21s-7-4.5-9.5-9A5 5 0 0 1 12 6a5 5 0 0 1 9.5 6c-2.5 4.5-9.5 9-9.5 9z" />
+          <path d="M4 12h3l1.5-2 2 4 1.5-3 1 1H20" />
+        </svg>
+      );
     default:
       return null;
   }

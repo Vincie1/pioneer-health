@@ -394,7 +394,14 @@ function SosView({ patient, setView, flash }) {
         origin: 'mobile',
         note: `Mobile SOS · ${patient.fullName} · GPS + health passport attached`,
       });
-      setDispatched(em);
+      // Enrich with demo dispatch details for the confirmation screen.
+      setDispatched({
+        ...em,
+        paramedic: 'Naidoo',
+        eta: 11,
+        address: '14 Mangaung Ave',
+        bay: 2,
+      });
       flash(`SOS sent — ${em.code}`);
     } catch (err) {
       flash(err.message);
@@ -404,13 +411,38 @@ function SosView({ patient, setView, flash }) {
     return (
       <Screen title="SOS" onBack={() => setView('home')}>
         <div className="text-center">
-          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-red-100 text-red-600">
-            <Icon name="alert" className="h-7 w-7" />
+          <span className="mx-auto flex h-16 w-16 items-center justify-center text-red-600">
+            <Icon name="ambulance" className="h-12 w-12" />
           </span>
-          <p className="mt-3 font-semibold text-red-700">Help is on the way</p>
-          <p className="mt-1 text-sm text-ink-soft">
-            {dispatched.code} dispatched. Your location and health passport were shared with EMS.
-          </p>
+          <h2 className="mt-4 text-2xl font-extrabold text-red-600">Ambulance on the way</h2>
+
+          <div className="mt-5 rounded-2xl bg-red-100/70 px-4 py-3 text-left">
+            <p className="font-bold text-red-700">
+              {dispatched.code} · Priority {dispatched.priority}
+            </p>
+            <p className="text-sm text-red-600/90">
+              Paramedic {dispatched.paramedic} accepted · ETA {dispatched.eta} min
+            </p>
+          </div>
+
+          <div className="mt-4 space-y-2 rounded-2xl bg-brand-50 px-4 py-4 text-left text-sm text-ink-soft">
+            <p className="flex items-center gap-2">
+              <Icon name="pin" className="h-4 w-4 text-brand-600" /> {dispatched.address} shared
+            </p>
+            <p className="flex items-center gap-2">
+              <Icon name="heart-pulse" className="h-4 w-4 text-brand-600" /> Health passport sent
+            </p>
+            <p className="flex items-center gap-2">
+              <Icon name="bell" className="h-4 w-4 text-brand-600" /> Trauma bay {dispatched.bay} pre-alerted
+            </p>
+          </div>
+
+          <button
+            onClick={() => setView('home')}
+            className="mt-5 w-full rounded-2xl border border-slate-200 py-3 text-sm font-bold text-ink hover:bg-slate-50"
+          >
+            Back to app
+          </button>
         </div>
       </Screen>
     );
