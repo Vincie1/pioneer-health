@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/Layout.jsx';
 import { Icon } from '../components/Icon.jsx';
-import { SERVICE_MAP, STATUS_LABEL, PRIORITIES, PRIORITY_STYLE } from '../lib/constants.js';
+import { SERVICE_MAP, STATUS_LABEL, PRIORITIES, PRIORITY_STYLE, DISPATCH_MAP, DISPATCH_STYLE } from '../lib/constants.js';
 import { api } from '../lib/api.js';
 
 const STATUS_STYLE = {
@@ -207,9 +207,32 @@ export default function Dashboard() {
                   <p className="mt-1 text-xs text-ink-soft">
                     {e.note ?? `${e.code} raised from kiosk`}
                   </p>
+
+                  {/* Live paramedic dispatch progress (driven from the /ambulance page). */}
+                  {e.dispatchStatus && e.dispatchStatus !== 'unassigned' ? (
+                    <div className="mt-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-ink-soft">
+                      <p className="flex items-center gap-1.5 font-semibold text-ink">
+                        <Icon name="ambulance" className="h-3.5 w-3.5 text-red-600" />
+                        {e.paramedic ? `Paramedic ${e.paramedic}` : 'Crew responding'}
+                        {e.unit ? ` · ${e.unit}` : ''}
+                      </p>
+                      <p className="mt-0.5">
+                        {(DISPATCH_MAP[e.dispatchStatus] ?? {}).label ?? e.dispatchStatus}
+                        {e.etaMinutes != null ? ` · ETA ${e.etaMinutes} min` : ''}
+                        {e.destinationBay != null ? ` · Bay ${e.destinationBay}` : ''}
+                      </p>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-xs italic text-ink-faint">Awaiting paramedic acceptance…</p>
+                  )}
+
                   <div className="mt-2 flex items-center gap-2">
-                    <span className="rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-semibold uppercase text-red-600">
-                      {e.status}
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${
+                        DISPATCH_STYLE[e.dispatchStatus] ?? 'bg-red-50 text-red-600'
+                      }`}
+                    >
+                      {(DISPATCH_MAP[e.dispatchStatus] ?? {}).label ?? e.status}
                     </span>
                     {e.status === 'active' && (
                       <button
