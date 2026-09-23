@@ -7,12 +7,12 @@ const prisma = new PrismaClient();
 // waiting patients (C-061 Thandi, M-024 Sipho, R-018 Lerato, V-009 Johan,
 // C-062 Naledi, M-025 Ayanda) + one active stroke emergency (EMS-042).
 const seedTickets = [
-  { code: 'C-061', service: 'consultation', fullName: 'Thandi M.', status: 'waiting', minsAgo: 4 },
-  { code: 'M-024', service: 'medication', fullName: 'Sipho D.', status: 'called', minsAgo: 7 },
-  { code: 'R-018', service: 'records', fullName: 'Lerato K.', status: 'waiting', minsAgo: 9 },
-  { code: 'V-009', service: 'virtual', fullName: 'Johan P.', status: 'in_room', minsAgo: 2 },
-  { code: 'C-062', service: 'consultation', fullName: 'Naledi S.', status: 'waiting', minsAgo: 12 },
-  { code: 'M-025', service: 'medication', fullName: 'Ayanda Z.', status: 'waiting', minsAgo: 1 },
+  { code: 'C-061', service: 'consultation', fullName: 'Thandi M.', status: 'waiting', priority: 'medium', minsAgo: 4 },
+  { code: 'M-024', service: 'medication', fullName: 'Sipho D.', status: 'called', priority: 'low', minsAgo: 7 },
+  { code: 'R-018', service: 'records', fullName: 'Lerato K.', status: 'waiting', priority: 'low', minsAgo: 9 },
+  { code: 'V-009', service: 'virtual', fullName: 'Johan P.', status: 'in_room', priority: 'medium', minsAgo: 2 },
+  { code: 'C-062', service: 'consultation', fullName: 'Naledi S.', status: 'waiting', priority: 'critical', minsAgo: 12 },
+  { code: 'M-025', service: 'medication', fullName: 'Ayanda Z.', status: 'waiting', priority: 'medium', minsAgo: 1 },
 ];
 
 async function main() {
@@ -29,6 +29,7 @@ async function main() {
         idNumber: '—',
         mobile: '—',
         status: t.status,
+        priority: t.priority,
         position: pos++,
         createdAt: new Date(Date.now() - t.minsAgo * 60_000),
       },

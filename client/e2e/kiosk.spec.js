@@ -70,3 +70,21 @@ test('staff can advance a ticket through its lifecycle to done', async ({ page }
   // After calling, the same row should offer "In room".
   await expect(firstRow.getByRole('button', { name: /in room/i })).toBeVisible();
 });
+
+test('critical-priority patients sort to the top of the queue', async ({ page }) => {
+  await page.goto('/dashboard');
+  await expect(page.getByRole('heading', { name: /staff dashboard/i })).toBeVisible();
+
+  // Scope to the "Waiting patients" card (avoid the Mobile activity list which
+  // also uses divide-y). Rows are the ones containing a mono ticket code.
+  const queueCard = page.locator('.card', { has: page.getByRole('heading', { name: 'Waiting patients' }) });
+  const rows = queueCard.locator('.divide-y > div');
+
+  // Seed puts C-062 (critical) first regardless of arrival time.
+  await expect(rows.first().locator('span.font-mono')).toHaveText('C-062');
+
+  // Bump the last waiting row to critical; it should jump up the queue.
+  const lastCode = await rows.last().locator('span.font-mono').innerText();
+  await rows.last().locator('select').selectOption('critical');
+  await expect(rows.last().locator('span.font-mono')).not.toHaveText(lastCode);
+});

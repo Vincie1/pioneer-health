@@ -47,3 +47,22 @@ export const STATUS_LABEL = {
   in_room: 'In room',
   done: 'Done',
 };
+
+// Triage acuity — staff-assigned. Queue sorts critical → medium → low.
+export const PRIORITIES = [
+  { key: 'critical', label: 'Critical' },
+  { key: 'medium', label: 'Medium' },
+  { key: 'low', label: 'Low' },
+];
+
+export const PRIORITY_STYLE = {
+  critical: 'bg-red-100 text-red-700',
+  medium: 'bg-amber-100 text-amber-700',
+  low: 'bg-slate-100 text-slate-600',
+};
+
+export const PRIORITY_LABEL = {
+  critical: 'Critical',
+  medium: 'Medium',
+  low: 'Low',
+};

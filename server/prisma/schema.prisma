@@ -19,6 +19,7 @@ model Ticket {
   idNumber      String
   mobile        String
   status        String   @default("waiting") // waiting | called | in_room | done
+  priority      String   @default("medium")   // low | medium | critical (triage acuity)
   arrivalStatus String   @default("arrived") // at_home | arrived
   origin        String   @default("kiosk")   // kiosk | mobile
   position      Int      @default(0)

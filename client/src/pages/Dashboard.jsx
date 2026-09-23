@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { Layout } from '../components/Layout.jsx';
 import { Icon } from '../components/Icon.jsx';
-import { SERVICE_MAP, STATUS_LABEL } from '../lib/constants.js';
+import { SERVICE_MAP, STATUS_LABEL, PRIORITIES, PRIORITY_STYLE } from '../lib/constants.js';
 import { api } from '../lib/api.js';
 
 const STATUS_STYLE = {
@@ -62,6 +62,12 @@ export default function Dashboard() {
     load();
   }
 
+  // Re-triage a ticket's acuity.
+  async function setPriority(code, priority) {
+    await api.setPriority(code, priority).catch(() => {});
+    load();
+  }
+
   async function advanceEmergency(code, status) {
     await api.setEmergencyStatus(code, status).catch(() => {});
     load();
@@ -96,8 +102,13 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
+      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-6">
         <StatTile value={stats?.inQueue ?? '—'} label="In queue now" />
+        <StatTile
+          value={stats?.criticalWaiting ?? '—'}
+          label="Critical waiting"
+          alert={(stats?.criticalWaiting ?? 0) > 0}
+        />
         <StatTile value={stats?.atHome ?? '—'} label="Booked from home" />
         <StatTile value={stats ? `${stats.avgWait} min` : '—'} label="Avg. wait" />
         <StatTile value={stats?.servedToday ?? '—'} label="Served today" />
@@ -117,11 +128,28 @@ export default function Dashboard() {
               <p className="py-6 text-center text-sm text-ink-faint">The queue is empty.</p>
             )}
             {waiting.map((t) => (
-              <div key={t.id} className="flex items-center gap-4 py-3">
+              <div key={t.id} className="flex items-center gap-3 py-3">
                 <span className="w-16 shrink-0 font-mono text-sm font-semibold text-ink">
                   {t.code}
                 </span>
-                <span className="flex-1 truncate text-sm text-ink">{t.fullName}</span>
+                <span className="min-w-0 flex-1 truncate text-sm text-ink">{t.fullName}</span>
+
+                {/* Triage priority pill + re-triage dropdown */}
+                <select
+                  value={t.priority ?? 'medium'}
+                  onChange={(e) => setPriority(t.code, e.target.value)}
+                  className={`shrink-0 cursor-pointer rounded-full border-0 px-2.5 py-1 text-xs font-semibold focus:ring-2 focus:ring-brand-500/30 ${
+                    PRIORITY_STYLE[t.priority ?? 'medium']
+                  }`}
+                  title="Set triage priority"
+                >
+                  {PRIORITIES.map((p) => (
+                    <option key={p.key} value={p.key}>
+                      {p.label}
+                    </option>
+                  ))}
+                </select>
+
                 <span className="hidden text-xs text-ink-faint sm:block">{minsAgo(t.createdAt)}</span>
                 <span
                   className={`rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_STYLE[t.status]}`}
@@ -131,7 +159,7 @@ export default function Dashboard() {
                 {NEXT_STATUS[t.status] && (
                   <button
                     onClick={() => advanceTicket(t.code, NEXT_STATUS[t.status])}
-                    className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
                       NEXT_STATUS[t.status] === 'done'
                         ? 'bg-brand-600 text-white hover:bg-brand-700'
                         : 'border border-slate-200 text-brand-700 hover:bg-brand-50'

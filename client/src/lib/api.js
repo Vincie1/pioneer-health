@@ -25,6 +25,8 @@ export const api = {
   callNext: (service) => req(`/tickets/call-next/${service}`, { method: 'POST' }),
   setStatus: (code, status) =>
     req(`/tickets/${code}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  setPriority: (code, priority) =>
+    req(`/tickets/${code}`, { method: 'PATCH', body: JSON.stringify({ priority }) }),
   arrive: (code) => req(`/tickets/${code}/arrive`, { method: 'POST' }),
 
   createEmergency: (data) =>

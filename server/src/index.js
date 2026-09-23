@@ -113,11 +113,19 @@ app.post('/api/tickets', wrap(async (req, res) => {
   res.status(201).json({ ...ticket, peopleAhead: ahead, estimatedWait: wait });
 }));
 
-// Full queue (dashboard) — only patients who are physically present (arrived).
+// Full queue (dashboard) — only patients who are physically present (arrived),
+// sorted by triage priority (critical → medium → low), then arrival time.
+const PRIORITY_RANK = { critical: 0, medium: 1, low: 2 };
 app.get('/api/tickets', wrap(async (_req, res) => {
   const tickets = await prisma.ticket.findMany({
     where: { status: { not: 'done' }, arrivalStatus: 'arrived' },
     orderBy: { createdAt: 'asc' },
+  });
+  tickets.sort((a, b) => {
+    const pa = PRIORITY_RANK[a.priority] ?? 1;
+    const pb = PRIORITY_RANK[b.priority] ?? 1;
+    if (pa !== pb) return pa - pb;
+    return new Date(a.createdAt) - new Date(b.createdAt);
   });
   res.json(tickets);
 }));
@@ -130,16 +138,27 @@ app.get('/api/tickets/:code', wrap(async (req, res) => {
   res.json({ ...ticket, peopleAhead: ahead, estimatedWait: SERVICES[ticket.service].estimatedWait });
 }));
 
-// Advance a ticket's status (Call next / progress).
+// Update a ticket's status (lifecycle) and/or triage priority.
 app.patch('/api/tickets/:code', wrap(async (req, res) => {
-  const { status } = req.body ?? {};
-  const allowed = ['waiting', 'called', 'in_room', 'done'];
-  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const { status, priority } = req.body ?? {};
+  const data = {};
+  if (status !== undefined) {
+    if (!['waiting', 'called', 'in_room', 'done'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    data.status = status;
+  }
+  if (priority !== undefined) {
+    if (!['low', 'medium', 'critical'].includes(priority)) {
+      return res.status(400).json({ error: 'Invalid priority' });
+    }
+    data.priority = priority;
+  }
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'Provide status and/or priority' });
+  }
   try {
-    const ticket = await prisma.ticket.update({
-      where: { code: req.params.code },
-      data: { status },
-    });
+    const ticket = await prisma.ticket.update({ where: { code: req.params.code }, data });
     res.json(ticket);
   } catch {
     res.status(404).json({ error: 'Not found' });
@@ -287,6 +306,9 @@ app.get('/api/stats', wrap(async (_req, res) => {
   const inQueue = await prisma.ticket.count({
     where: { arrivalStatus: 'arrived', status: { in: ['waiting', 'called'] } },
   });
+  const criticalWaiting = await prisma.ticket.count({
+    where: { arrivalStatus: 'arrived', status: { in: ['waiting', 'called'] }, priority: 'critical' },
+  });
   const atHome = await prisma.ticket.count({ where: { arrivalStatus: 'at_home' } });
   const activeEmergencies = await prisma.emergency.count({ where: { status: { not: 'resolved' } } });
   const openScripts = await prisma.script.count({ where: { status: 'requested' } });
@@ -311,7 +333,7 @@ app.get('/api/stats', wrap(async (_req, res) => {
     perService.reduce((a, s) => a + s.estimatedWait, 0) / perService.length,
   );
 
-  res.json({ inQueue, atHome, avgWait, servedToday, activeEmergencies, openScripts, openNurse, perService });
+  res.json({ inQueue, criticalWaiting, atHome, avgWait, servedToday, activeEmergencies, openScripts, openNurse, perService });
 }));
 
 // Centralised error handler — keeps the process alive on a DB/query failure.
