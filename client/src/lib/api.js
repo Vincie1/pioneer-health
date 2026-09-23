@@ -32,8 +32,11 @@ export const api = {
   createEmergency: (data) =>
     req('/emergencies', { method: 'POST', body: JSON.stringify(data) }),
   listEmergencies: () => req('/emergencies'),
+  getEmergency: (code) => req(`/emergencies/${code}`),
   setEmergencyStatus: (code, status) =>
     req(`/emergencies/${code}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  updateDispatch: (code, fields) =>
+    req(`/emergencies/${code}`, { method: 'PATCH', body: JSON.stringify(fields) }),
 
   createScript: (data) => req('/scripts', { method: 'POST', body: JSON.stringify(data) }),
   listScripts: (patient) => req(`/scripts${patient ? `?patient=${encodeURIComponent(patient)}` : ''}`),

@@ -36,6 +36,12 @@ model Emergency {
   status      String   @default("active") // active | dispatched | resolved
   origin      String   @default("kiosk")  // kiosk | mobile
   note        String?
+  // Paramedic dispatch details, set from the /ambulance page as a crew responds.
+  dispatchStatus String @default("unassigned") // unassigned | en_route | on_scene | transporting | arrived
+  paramedic      String?
+  unit           String?  // e.g. "EMS-A3"
+  etaMinutes     Int?
+  destinationBay Int?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

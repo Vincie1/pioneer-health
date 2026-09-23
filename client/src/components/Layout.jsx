@@ -52,6 +52,12 @@ function Header({ variant }) {
               Mobile app
             </Link>
             <Link
+              to="/ambulance"
+              className="text-xs font-medium text-ink-faint hover:text-ink-soft"
+            >
+              Ambulance
+            </Link>
+            <Link
               to="/dashboard"
               className="text-xs font-medium text-ink-faint hover:text-ink-soft"
             >

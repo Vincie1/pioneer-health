@@ -222,16 +222,53 @@ app.get('/api/emergencies', wrap(async (_req, res) => {
   res.json(emergencies);
 }));
 
-// Advance an emergency: active -> dispatched -> resolved.
+// Single emergency by code — polled by the mobile SOS screen to reflect the
+// real paramedic dispatch state (crew, ETA, bay) as it changes.
+app.get('/api/emergencies/:code', wrap(async (req, res) => {
+  const em = await prisma.emergency.findUnique({ where: { code: req.params.code } });
+  if (!em) return res.status(404).json({ error: 'Not found' });
+  res.json(em);
+}));
+
+// Advance an emergency. Accepts the staff status lifecycle (active ->
+// dispatched -> resolved) and/or paramedic dispatch fields set from /ambulance.
 app.patch('/api/emergencies/:code', wrap(async (req, res) => {
-  const { status } = req.body ?? {};
-  const allowed = ['active', 'dispatched', 'resolved'];
-  if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  const { status, dispatchStatus, paramedic, unit, etaMinutes, destinationBay } = req.body ?? {};
+  const data = {};
+
+  if (status !== undefined) {
+    if (!['active', 'dispatched', 'resolved'].includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    data.status = status;
+  }
+  if (dispatchStatus !== undefined) {
+    const allowed = ['unassigned', 'en_route', 'on_scene', 'transporting', 'arrived'];
+    if (!allowed.includes(dispatchStatus)) {
+      return res.status(400).json({ error: 'Invalid dispatchStatus' });
+    }
+    data.dispatchStatus = dispatchStatus;
+    // A crew responding moves the emergency into the dispatched lifecycle;
+    // arriving resolves it.
+    if (dispatchStatus === 'arrived') data.status = 'resolved';
+    else if (dispatchStatus !== 'unassigned') data.status = 'dispatched';
+  }
+  if (paramedic !== undefined) data.paramedic = paramedic || null;
+  if (unit !== undefined) data.unit = unit || null;
+  if (etaMinutes !== undefined) {
+    data.etaMinutes = etaMinutes === null || etaMinutes === '' ? null : Number(etaMinutes);
+  }
+  if (destinationBay !== undefined) {
+    data.destinationBay =
+      destinationBay === null || destinationBay === '' ? null : Number(destinationBay);
+  }
+
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'No valid fields to update' });
+  }
+
   try {
-    const em = await prisma.emergency.update({
-      where: { code: req.params.code },
-      data: { status },
-    });
+    const em = await prisma.emergency.update({ where: { code: req.params.code }, data });
     res.json(em);
   } catch {
     res.status(404).json({ error: 'Not found' });

@@ -41,6 +41,28 @@ export const EMERGENCY_TYPES = [
   { key: 'other', label: 'Other emergency' },
 ];
 
+export const EMERGENCY_LABEL = Object.fromEntries(EMERGENCY_TYPES.map((t) => [t.key, t.label]));
+
+// Paramedic dispatch lifecycle for the /ambulance page. Ordered: a crew accepts
+// (en_route), reaches the patient (on_scene), transports, then arrives at the clinic.
+export const DISPATCH_STAGES = [
+  { key: 'unassigned', label: 'Unassigned', next: 'en_route', action: 'Accept & respond' },
+  { key: 'en_route', label: 'En route to patient', next: 'on_scene', action: 'Mark on scene' },
+  { key: 'on_scene', label: 'On scene', next: 'transporting', action: 'Start transport' },
+  { key: 'transporting', label: 'Transporting to clinic', next: 'arrived', action: 'Mark arrived' },
+  { key: 'arrived', label: 'Arrived at clinic', next: null, action: null },
+];
+
+export const DISPATCH_MAP = Object.fromEntries(DISPATCH_STAGES.map((s) => [s.key, s]));
+
+export const DISPATCH_STYLE = {
+  unassigned: 'bg-slate-100 text-slate-600',
+  en_route: 'bg-amber-100 text-amber-700',
+  on_scene: 'bg-blue-100 text-blue-700',
+  transporting: 'bg-indigo-100 text-indigo-700',
+  arrived: 'bg-green-100 text-green-700',
+};
+
 export const STATUS_LABEL = {
   waiting: 'Waiting',
   called: 'Called',

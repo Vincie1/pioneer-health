@@ -43,12 +43,31 @@ async function main() {
       priority: 1,
       status: 'dispatched',
       note: 'EMS-042 dispatched from kiosk · ETA 11 min · Trauma bay 2 prepared',
+      dispatchStatus: 'en_route',
+      paramedic: 'Naidoo',
+      unit: 'EMS-A3',
+      etaMinutes: 11,
+      destinationBay: 2,
       createdAt: new Date(Date.now() - 3 * 60_000),
     },
   });
 
+  // A fresh, unassigned call so a paramedic can demo "Accept & respond".
+  await prisma.emergency.create({
+    data: {
+      code: 'EMS-043',
+      type: 'cardiac',
+      priority: 1,
+      status: 'active',
+      note: 'Mobile SOS · chest pain · GPS + health passport attached',
+      origin: 'mobile',
+      dispatchStatus: 'unassigned',
+      createdAt: new Date(Date.now() - 1 * 60_000),
+    },
+  });
+
   const services = Object.keys(SERVICES).length;
-  console.log(`Seeded ${seedTickets.length} tickets across ${services} services + 1 emergency.`);
+  console.log(`Seeded ${seedTickets.length} tickets across ${services} services + 2 emergencies.`);
 }
 
 main()

@@ -6,6 +6,7 @@ import KioskCheckIn from './pages/KioskCheckIn.jsx';
 import Emergency from './pages/Emergency.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import Mobile from './pages/Mobile.jsx';
+import Ambulance from './pages/Ambulance.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
       <Route path="/emergency" element={<Emergency />} />
       <Route path="/dashboard" element={<Dashboard />} />
       <Route path="/mobile" element={<Mobile />} />
+      <Route path="/ambulance" element={<Ambulance />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -88,3 +88,17 @@ test('critical-priority patients sort to the top of the queue', async ({ page })
   await rows.last().locator('select').selectOption('critical');
   await expect(rows.last().locator('span.font-mono')).not.toHaveText(lastCode);
 });
+
+test('paramedic accepts an ambulance call and goes en route', async ({ page }) => {
+  await page.goto('/ambulance');
+  await expect(page.getByRole('heading', { name: /ambulance dispatch/i })).toBeVisible();
+
+  // The unassigned call (EMS-043) has an Accept form. Fill and accept it.
+  const card = page.locator('.rounded-2xl', { hasText: 'EMS-043' }).first();
+  await card.getByPlaceholder(/your name/i).fill('Khumalo');
+  await card.getByRole('button', { name: /accept & respond/i }).click();
+
+  // It should now show the crew and offer the next stage action.
+  await expect(card.getByText(/Paramedic Khumalo/)).toBeVisible();
+  await expect(card.getByRole('button', { name: /mark on scene/i })).toBeVisible();
+});

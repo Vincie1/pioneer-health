@@ -387,6 +387,27 @@ function NurseView({ patient, setView, flash }) {
 function SosView({ patient, setView, flash }) {
   const [selected, setSelected] = useState('cardiac');
   const [dispatched, setDispatched] = useState(null);
+
+  // Once an SOS is sent, poll the real emergency so the screen reflects what the
+  // paramedic enters on the /ambulance page (name, ETA, bay) instead of a mock.
+  useEffect(() => {
+    if (!dispatched?.code) return undefined;
+    let alive = true;
+    const tick = async () => {
+      try {
+        const em = await api.getEmergency(dispatched.code);
+        if (alive) setDispatched(em);
+      } catch {
+        /* keep last known state */
+      }
+    };
+    const t = setInterval(tick, 4000);
+    return () => {
+      alive = false;
+      clearInterval(t);
+    };
+  }, [dispatched?.code]);
+
   async function send() {
     try {
       const em = await api.createEmergency({
@@ -394,20 +415,20 @@ function SosView({ patient, setView, flash }) {
         origin: 'mobile',
         note: `Mobile SOS · ${patient.fullName} · GPS + health passport attached`,
       });
-      // Enrich with demo dispatch details for the confirmation screen.
-      setDispatched({
-        ...em,
-        paramedic: 'Naidoo',
-        eta: 11,
-        address: '14 Mangaung Ave',
-        bay: 2,
-      });
+      setDispatched(em);
       flash(`SOS sent — ${em.code}`);
     } catch (err) {
       flash(err.message);
     }
   }
   if (dispatched) {
+    const accepted = dispatched.dispatchStatus && dispatched.dispatchStatus !== 'unassigned';
+    const crewLine = accepted
+      ? `Paramedic ${dispatched.paramedic ?? 'crew'} accepted${
+          dispatched.etaMinutes != null ? ` · ETA ${dispatched.etaMinutes} min` : ''
+        }`
+      : 'Alerting nearest crew · awaiting paramedic…';
+    const address = patient?.address ?? '14 Mangaung Ave';
     return (
       <Screen title="SOS" onBack={() => setView('home')}>
         <div className="text-center">
@@ -420,20 +441,21 @@ function SosView({ patient, setView, flash }) {
             <p className="font-bold text-red-700">
               {dispatched.code} · Priority {dispatched.priority}
             </p>
-            <p className="text-sm text-red-600/90">
-              Paramedic {dispatched.paramedic} accepted · ETA {dispatched.eta} min
-            </p>
+            <p className="text-sm text-red-600/90">{crewLine}</p>
           </div>
 
           <div className="mt-4 space-y-2 rounded-2xl bg-brand-50 px-4 py-4 text-left text-sm text-ink-soft">
             <p className="flex items-center gap-2">
-              <Icon name="pin" className="h-4 w-4 text-brand-600" /> {dispatched.address} shared
+              <Icon name="pin" className="h-4 w-4 text-brand-600" /> {address} shared
             </p>
             <p className="flex items-center gap-2">
               <Icon name="heart-pulse" className="h-4 w-4 text-brand-600" /> Health passport sent
             </p>
             <p className="flex items-center gap-2">
-              <Icon name="bell" className="h-4 w-4 text-brand-600" /> Trauma bay {dispatched.bay} pre-alerted
+              <Icon name="bell" className="h-4 w-4 text-brand-600" />{' '}
+              {dispatched.destinationBay != null
+                ? `Trauma bay ${dispatched.destinationBay} pre-alerted`
+                : 'Trauma bay being prepared'}
             </p>
           </div>
 
