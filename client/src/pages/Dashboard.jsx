@@ -21,16 +21,27 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [emergencies, setEmergencies] = useState([]);
+  const [error, setError] = useState('');
 
   const load = useCallback(async () => {
-    const [s, t, e] = await Promise.all([
-      api.stats(),
-      api.listTickets(),
-      api.listEmergencies(),
-    ]);
-    setStats(s);
-    setTickets(t);
-    setEmergencies(e);
+    try {
+      const [s, t, e] = await Promise.all([
+        api.stats(),
+        api.listTickets(),
+        api.listEmergencies(),
+      ]);
+      setStats(s);
+      setTickets(t);
+      setEmergencies(e);
+      setError('');
+    } catch (err) {
+      // Surface failures instead of silently rendering an empty queue.
+      setError(
+        `Could not reach the API${
+          import.meta.env.VITE_API_URL ? ` at ${import.meta.env.VITE_API_URL}` : ' (VITE_API_URL is not set)'
+        }. ${err.message}`,
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -52,6 +63,12 @@ export default function Dashboard() {
         <h1 className="text-3xl font-extrabold tracking-tight text-ink">Staff Dashboard</h1>
         <p className="mt-1 text-ink-soft">Everything checked in at the kiosk, in real time.</p>
       </div>
+
+      {error && (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
       <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile value={stats?.inQueue ?? '—'} label="In queue now" />
