@@ -40,6 +40,15 @@ export default function KioskHome() {
         ))}
       </div>
 
+      {/* Already booked on the mobile app → scan-in / check-in */}
+      <Link
+        to="/checkin"
+        className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-6 py-4 text-sm font-semibold text-brand-700 transition hover:bg-brand-100"
+      >
+        <Icon name="check" className="h-5 w-5" />
+        Already booked on the app? Scan / Check in
+      </Link>
+
       {/* Emergency */}
       <div className="mt-8 overflow-hidden rounded-xl2 border border-red-100 bg-red-50">
         <div className="flex flex-col items-start gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">

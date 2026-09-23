@@ -42,3 +42,14 @@ export const EMERGENCY_TYPES = {
 
 export const isValidService = (s) => Object.prototype.hasOwnProperty.call(SERVICES, s);
 export const isValidEmergency = (t) => Object.prototype.hasOwnProperty.call(EMERGENCY_TYPES, t);
+
+// Mocked logged-in mobile patient (no real auth in this training demo).
+export const MOCK_PATIENT = {
+  fullName: 'Thandi Mokoena',
+  firstName: 'Thandi',
+  idNumber: '9001015800083',
+  mobile: '082 123 4567',
+  bloodType: 'O+',
+  allergies: ['Penicillin'],
+  chronic: ['Hypertension'],
+};

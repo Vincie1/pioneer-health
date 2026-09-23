@@ -17,6 +17,7 @@ async function req(path, options) {
 export const api = {
   services: () => req('/services'),
   emergencyTypes: () => req('/emergency-types'),
+  patient: () => req('/patient'),
 
   createTicket: (data) => req('/tickets', { method: 'POST', body: JSON.stringify(data) }),
   getTicket: (code) => req(`/tickets/${code}`),
@@ -24,10 +25,18 @@ export const api = {
   callNext: (service) => req(`/tickets/call-next/${service}`, { method: 'POST' }),
   setStatus: (code, status) =>
     req(`/tickets/${code}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  arrive: (code) => req(`/tickets/${code}/arrive`, { method: 'POST' }),
 
   createEmergency: (data) =>
     req('/emergencies', { method: 'POST', body: JSON.stringify(data) }),
   listEmergencies: () => req('/emergencies'),
+
+  createScript: (data) => req('/scripts', { method: 'POST', body: JSON.stringify(data) }),
+  listScripts: (patient) => req(`/scripts${patient ? `?patient=${encodeURIComponent(patient)}` : ''}`),
+
+  createNurseRequest: (data) =>
+    req('/nurse-requests', { method: 'POST', body: JSON.stringify(data) }),
+  listNurseRequests: () => req('/nurse-requests'),
 
   stats: () => req('/stats'),
 };

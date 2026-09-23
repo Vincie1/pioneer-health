@@ -4,6 +4,7 @@ import { PrismaClient } from '@prisma/client';
 import {
   SERVICES,
   EMERGENCY_TYPES,
+  MOCK_PATIENT,
   isValidService,
   isValidEmergency,
 } from './services.js';
@@ -51,11 +52,13 @@ async function nextEmergencyCode() {
   return `EMS-${String(next).padStart(3, '0')}`;
 }
 
-// People ahead of a ticket in the same service that are still queueing.
+// People ahead of a ticket in the same service that are physically present
+// (arrived) and still queueing. At-home tickets don't occupy a queue slot.
 async function peopleAhead(ticket) {
   return prisma.ticket.count({
     where: {
       service: ticket.service,
+      arrivalStatus: 'arrived',
       status: { in: ['waiting', 'called'] },
       createdAt: { lt: ticket.createdAt },
     },
@@ -74,20 +77,35 @@ app.get('/api/emergency-types', (_req, res) => {
   res.json(Object.values(EMERGENCY_TYPES));
 });
 
+// Mocked logged-in mobile patient.
+app.get('/api/patient', (_req, res) => res.json(MOCK_PATIENT));
+
 // ---- tickets ---------------------------------------------------------------
 
-// Create a ticket (kiosk check-in).
+// Create a ticket (kiosk check-in, or mobile booking from home).
 app.post('/api/tickets', wrap(async (req, res) => {
-  const { service, fullName, idNumber, mobile } = req.body ?? {};
+  const { service, fullName, idNumber, mobile, origin } = req.body ?? {};
   if (!isValidService(service)) return res.status(400).json({ error: 'Invalid service' });
   if (!fullName || !idNumber || !mobile) {
     return res.status(400).json({ error: 'fullName, idNumber and mobile are required' });
   }
 
+  // Kiosk check-ins are physically present; mobile bookings start at home
+  // and only enter the physical queue once they scan in at the kiosk.
+  const isMobile = origin === 'mobile';
   const code = await nextCode(service);
   const count = await prisma.ticket.count();
   const ticket = await prisma.ticket.create({
-    data: { code, service, fullName, idNumber, mobile, position: count + 1 },
+    data: {
+      code,
+      service,
+      fullName,
+      idNumber,
+      mobile,
+      origin: isMobile ? 'mobile' : 'kiosk',
+      arrivalStatus: isMobile ? 'at_home' : 'arrived',
+      position: count + 1,
+    },
   });
 
   const ahead = await peopleAhead(ticket);
@@ -95,10 +113,10 @@ app.post('/api/tickets', wrap(async (req, res) => {
   res.status(201).json({ ...ticket, peopleAhead: ahead, estimatedWait: wait });
 }));
 
-// Full queue (dashboard).
+// Full queue (dashboard) — only patients who are physically present (arrived).
 app.get('/api/tickets', wrap(async (_req, res) => {
   const tickets = await prisma.ticket.findMany({
-    where: { status: { not: 'done' } },
+    where: { status: { not: 'done' }, arrivalStatus: 'arrived' },
     orderBy: { createdAt: 'asc' },
   });
   res.json(tickets);
@@ -144,14 +162,35 @@ app.post('/api/tickets/call-next/:service', wrap(async (req, res) => {
   res.json(ticket);
 }));
 
-// ---- emergencies -----------------------------------------------------------
+// Scan-in at the kiosk: flip an at-home ticket to arrived so it enters the
+// physical queue and becomes visible on the staff dashboard. This is what the
+// kiosk "Check in" screen calls with the code from the patient's QR.
+app.post('/api/tickets/:code/arrive', wrap(async (req, res) => {
+  const ticket = await prisma.ticket.findUnique({ where: { code: req.params.code } });
+  if (!ticket) return res.status(404).json({ error: 'Ticket not found' });
+  if (ticket.arrivalStatus === 'arrived') {
+    return res.status(200).json({ ...ticket, alreadyArrived: true });
+  }
+  const updated = await prisma.ticket.update({
+    where: { code: req.params.code },
+    data: { arrivalStatus: 'arrived', status: 'waiting' },
+  });
+  const ahead = await peopleAhead(updated);
+  res.json({ ...updated, peopleAhead: ahead, estimatedWait: SERVICES[updated.service].estimatedWait });
+}));
 
 app.post('/api/emergencies', wrap(async (req, res) => {
-  const { type, note } = req.body ?? {};
+  const { type, note, origin } = req.body ?? {};
   if (!isValidEmergency(type)) return res.status(400).json({ error: 'Invalid emergency type' });
   const code = await nextEmergencyCode();
   const emergency = await prisma.emergency.create({
-    data: { code, type, priority: EMERGENCY_TYPES[type].priority, note: note ?? null },
+    data: {
+      code,
+      type,
+      priority: EMERGENCY_TYPES[type].priority,
+      origin: origin === 'mobile' ? 'mobile' : 'kiosk',
+      note: note ?? null,
+    },
   });
   res.status(201).json(emergency);
 }));
@@ -164,13 +203,52 @@ app.get('/api/emergencies', wrap(async (_req, res) => {
   res.json(emergencies);
 }));
 
+// ---- scripts (repeat prescriptions) ---------------------------------------
+
+app.post('/api/scripts', wrap(async (req, res) => {
+  const { patientName, medication } = req.body ?? {};
+  if (!patientName || !medication) {
+    return res.status(400).json({ error: 'patientName and medication are required' });
+  }
+  const script = await prisma.script.create({ data: { patientName, medication } });
+  res.status(201).json(script);
+}));
+
+app.get('/api/scripts', wrap(async (req, res) => {
+  const where = req.query.patient ? { patientName: String(req.query.patient) } : {};
+  const scripts = await prisma.script.findMany({ where, orderBy: { createdAt: 'desc' } });
+  res.json(scripts);
+}));
+
+// ---- nurse line ------------------------------------------------------------
+
+app.post('/api/nurse-requests', wrap(async (req, res) => {
+  const { patientName, reason } = req.body ?? {};
+  if (!patientName) return res.status(400).json({ error: 'patientName is required' });
+  const request = await prisma.nurseRequest.create({
+    data: { patientName, reason: reason ?? null },
+  });
+  res.status(201).json(request);
+}));
+
+app.get('/api/nurse-requests', wrap(async (_req, res) => {
+  const requests = await prisma.nurseRequest.findMany({
+    where: { status: 'open' },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(requests);
+}));
+
 // ---- dashboard stats -------------------------------------------------------
 
 app.get('/api/stats', wrap(async (_req, res) => {
   const inQueue = await prisma.ticket.count({
-    where: { status: { in: ['waiting', 'called'] } },
+    where: { arrivalStatus: 'arrived', status: { in: ['waiting', 'called'] } },
   });
+  const atHome = await prisma.ticket.count({ where: { arrivalStatus: 'at_home' } });
   const activeEmergencies = await prisma.emergency.count({ where: { status: { not: 'resolved' } } });
+  const openScripts = await prisma.script.count({ where: { status: 'requested' } });
+  const openNurse = await prisma.nurseRequest.count({ where: { status: 'open' } });
 
   // Served today = tickets marked done today. Seeded demo shows a static 184
   // baseline so the tile matches the mockup on a fresh DB.
@@ -191,7 +269,7 @@ app.get('/api/stats', wrap(async (_req, res) => {
     perService.reduce((a, s) => a + s.estimatedWait, 0) / perService.length,
   );
 
-  res.json({ inQueue, avgWait, servedToday, activeEmergencies, perService });
+  res.json({ inQueue, atHome, avgWait, servedToday, activeEmergencies, openScripts, openNurse, perService });
 }));
 
 // Centralised error handler — keeps the process alive on a DB/query failure.

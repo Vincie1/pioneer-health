@@ -8,28 +8,53 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// A patient check-in at the kiosk produces a queue Ticket.
+// A patient check-in produces a queue Ticket. Tickets can originate at the
+// kiosk (arrived immediately) or from the mobile app (booked from home,
+// arrivalStatus = at_home until the patient scans in at the kiosk).
 model Ticket {
-  id           String   @id @default(cuid())
-  code         String   @unique // e.g. "C-061"
-  service      String            // consultation | medication | records | virtual
-  fullName     String
-  idNumber     String
-  mobile       String
-  status       String   @default("waiting") // waiting | called | in_room | done
-  position     Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(cuid())
+  code          String   @unique // e.g. "C-061"
+  service       String            // consultation | medication | records | virtual
+  fullName      String
+  idNumber      String
+  mobile        String
+  status        String   @default("waiting") // waiting | called | in_room | done
+  arrivalStatus String   @default("arrived") // at_home | arrived
+  origin        String   @default("kiosk")   // kiosk | mobile
+  position      Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
-// Emergency requests raised from the kiosk emergency screen.
+// Emergency requests raised from the kiosk emergency screen or mobile SOS.
 model Emergency {
   id          String   @id @default(cuid())
   code        String   @unique // e.g. "EMS-042"
   type        String            // cardiac | stroke | bleeding | trauma | breathing | other
   priority    Int      @default(1)
   status      String   @default("active") // active | dispatched | resolved
+  origin      String   @default("kiosk")  // kiosk | mobile
   note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Repeat / chronic prescription requests from the mobile app.
+model Script {
+  id          String   @id @default(cuid())
+  patientName String
+  medication  String
+  status      String   @default("requested") // requested | ready | collected
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// Nurse-line callback requests from the mobile app.
+model NurseRequest {
+  id          String   @id @default(cuid())
+  patientName String
+  reason      String?
+  status      String   @default("open") // open | answered
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }

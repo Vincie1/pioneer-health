@@ -33,3 +33,29 @@ test('emergency request dispatches', async ({ page }) => {
   await page.getByRole('button', { name: /send emergency request/i }).click();
   await expect(page.getByText(/help is on the way/i)).toBeVisible();
 });
+
+test('mobile booking is at-home, then arrives via kiosk check-in', async ({ page }) => {
+  // Book from the mobile app.
+  await page.goto('/mobile');
+  await page.getByRole('button', { name: 'Book', exact: true }).first().click();
+  await page.getByRole('button', { name: /Medical Consultation/ }).click();
+
+  // After booking, the app shows the check-in screen with the QR + ticket code.
+  await expect(page.getByText(/show this at the kiosk/i)).toBeVisible({ timeout: 10000 });
+  const code = await page.locator('span.font-mono').first().innerText(); // e.g. C-063
+  expect(code).toMatch(/^[CMRV]-\d{3}$/);
+
+  // It must NOT be in the physical dashboard queue yet.
+  await page.goto('/dashboard');
+  await expect(page.getByText(code)).toHaveCount(0);
+
+  // Check in at the kiosk with the code.
+  await page.goto('/checkin');
+  await page.getByPlaceholder('C-063').fill(code);
+  await page.getByRole('button', { name: /confirm arrival/i }).click();
+  await expect(page.getByText(/checked in/i)).toBeVisible();
+
+  // Now it appears on the dashboard.
+  await page.goto('/dashboard');
+  await expect(page.getByText(code)).toBeVisible();
+});

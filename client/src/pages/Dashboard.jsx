@@ -21,18 +21,24 @@ export default function Dashboard() {
   const [stats, setStats] = useState(null);
   const [tickets, setTickets] = useState([]);
   const [emergencies, setEmergencies] = useState([]);
+  const [scripts, setScripts] = useState([]);
+  const [nurse, setNurse] = useState([]);
   const [error, setError] = useState('');
 
   const load = useCallback(async () => {
     try {
-      const [s, t, e] = await Promise.all([
+      const [s, t, e, sc, nr] = await Promise.all([
         api.stats(),
         api.listTickets(),
         api.listEmergencies(),
+        api.listScripts(),
+        api.listNurseRequests(),
       ]);
       setStats(s);
       setTickets(t);
       setEmergencies(e);
+      setScripts(sc);
+      setNurse(nr);
       setError('');
     } catch (err) {
       // Surface failures instead of silently rendering an empty queue.
@@ -70,8 +76,9 @@ export default function Dashboard() {
         </div>
       )}
 
-      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="mt-8 grid grid-cols-2 gap-4 lg:grid-cols-5">
         <StatTile value={stats?.inQueue ?? '—'} label="In queue now" />
+        <StatTile value={stats?.atHome ?? '—'} label="Booked from home" />
         <StatTile value={stats ? `${stats.avgWait} min` : '—'} label="Avg. wait" />
         <StatTile value={stats?.servedToday ?? '—'} label="Served today" />
         <StatTile
@@ -154,6 +161,41 @@ export default function Dashboard() {
                   </Link>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Mobile activity — scripts + nurse-line requests from the app */}
+          <div className="card p-6">
+            <h2 className="text-lg font-bold text-ink">Mobile activity</h2>
+            <div className="mt-4 space-y-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                  Repeat scripts ({scripts.length})
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {scripts.length === 0 && <p className="text-sm text-ink-faint">None requested.</p>}
+                  {scripts.slice(0, 4).map((s) => (
+                    <div key={s.id} className="flex items-center justify-between text-sm">
+                      <span className="truncate text-ink">{s.medication}</span>
+                      <span className="ml-2 shrink-0 text-[11px] text-ink-faint">{s.patientName}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-faint">
+                  Nurse callbacks ({nurse.length})
+                </p>
+                <div className="mt-2 space-y-1.5">
+                  {nurse.length === 0 && <p className="text-sm text-ink-faint">No open requests.</p>}
+                  {nurse.slice(0, 4).map((n) => (
+                    <div key={n.id} className="text-sm">
+                      <span className="text-ink">{n.patientName}</span>
+                      {n.reason && <span className="text-ink-faint"> — {n.reason}</span>}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </div>
